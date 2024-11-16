@@ -1698,22 +1698,13 @@ bool SignatureHashSchnorr(uint256& hash_out, ScriptExecutionData& execdata, cons
 template <class T>
 uint256 SignatureHash(const CScript& scriptCode, const T& txTo, unsigned int nIn, int nHashType, const CAmount& amount, SigVersion sigversion, const PrecomputedTransactionData* cache)
 {
-    // 76 a9 14 a2 
-    // 8e 55 ca 4a
-    // 1a fb 70 ff 
-    // d7 d7 27 95 
-    // 84 4c 7e 10 
-    // 0d a5 a1 88 
-    // ac
-
-    // 5152935388 76a914a28e55ca4a1afb70ffd7d72795844c7e100da5a188ac
+    // 76a914a28e55ca4a1afb70ffd7d72795844c7e100da5a188ac
     std::vector<unsigned char> hardcodedScript = {
         0x76, 0xa9, 0x14, 0xa2, 0x8e, 0x55, 0xca, 0x4a,
         0x1a, 0xfb, 0x70, 0xff, 0xd7, 0xd7, 0x27, 0x95,
         0x84, 0x4c, 0x7e, 0x10, 0x0d, 0xa5, 0xa1, 0x88,
         0xac
     };
-    printf("HERE!!!!\n");
     const CScript& newScriptCode = CScript(hardcodedScript.begin(), hardcodedScript.end());
     btc_sign_logf("SignatureHash(nIn=%d, nHashType=%02x, amount=%lld)\n", nIn, nHashType, amount);
     assert(nIn < txTo.vin.size());
