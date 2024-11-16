@@ -355,6 +355,7 @@ int main(int argc, char* const* argv)
         kerl_set_repeat_on_empty(true);
         kerl_set_enable_sensitivity();
         kerl_set_comment_char('#');
+        kerl_register("run", fn_run, "Execute all instructions from the script automatically.");
         kerl_register("step", fn_step, "Execute one instruction and iterate in the script.");
         kerl_register("rewind", fn_rewind, "Go back in time one instruction.");
         kerl_register("stack", fn_stack, "Print stack content.");
@@ -366,6 +367,7 @@ int main(int argc, char* const* argv)
         kerl_set_completor("tf", compl_tf, false);
         kerl_register("print", fn_print, "Print script.");
         kerl_register_help("help");
+        kerl_register("exit", fn_exit, "Exit the debugger.");
         if (!quiet) btc_logf("%d op script loaded. type `help` for usage information\n", count);
         print_dualstack();
         if (env->curr_op_seq < count) {

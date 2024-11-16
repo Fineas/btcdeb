@@ -91,6 +91,7 @@ InterpreterEnv::InterpreterEnv(std::vector<valtype>& stack_in, const CScript& sc
     operational = true;
     set_error(serror, SCRIPT_ERR_UNKNOWN_ERROR);
     if (script.size() > MAX_SCRIPT_SIZE) {
+        
         set_error(serror, SCRIPT_ERR_SCRIPT_SIZE);
         operational = false;
         return;
@@ -268,6 +269,7 @@ bool StepExtended(ScriptExecutionEnvironment& env, CScript::const_iterator& pc, 
 {
     auto& stack = env.stack;
     auto& serror = env.serror;
+    static const valtype vchFalse(0);
 
     valtype vch1, vch2, vch3;
     switch (env.opcode) {
@@ -346,14 +348,91 @@ bool StepExtended(ScriptExecutionEnvironment& env, CScript::const_iterator& pc, 
     case OP_XOR:
         // (x1 x2 -- out)
         if (stack.size() < 2) return set_error(serror, SCRIPT_ERR_INVALID_STACK_OPERATION);
+
         vch1 = stacktop(-2);
         vch2 = stacktop(-1);
-        if (vch1.size() != vch2.size()) return set_error(serror, SCRIPT_ERR_UNKNOWN_ERROR);
+
+        // printf("vch1 size: %zu\n", vch1.size());
+        // for (size_t i = 0; i < vch1.size(); ++i) {
+        //     printf("vch1[%zu]: 0x%02x ", i, vch1[i]);
+        // }
+        // printf("\n");
+
+        // printf("vch2 size: %zu\n", vch2.size());
+        // for (size_t i = 0; i < vch2.size(); ++i) {
+        //     printf("vch2[%zu]: 0x%02x ", i, vch2[i]);
+        // }
+        // printf("\n");
+
+        // ensure equal length
+        if (vch1.size() < vch2.size()) {
+            unsigned char zeroPad = 0;
+            for (size_t i = vch1.size(); i < vch2.size(); ++i) {
+                vch1.push_back(zeroPad);
+            }
+        } else if (vch2.size() < vch1.size()) {
+            unsigned char zeroPad = 0;
+            for (size_t i = vch2.size(); i < vch1.size(); ++i) {
+                vch2.push_back(zeroPad);
+            }
+        }
+
+        // printf("After padding:\n");
+        // printf("vch1 size: %zu\n", vch1.size());
+        // for (size_t i = 0; i < vch1.size(); ++i) {
+        //     printf("vch1[%zu]: 0x%02x ", i, vch1[i]);
+        // }
+        // printf("\n");
+
+        // printf("vch2 size: %zu\n", vch2.size());
+        // for (size_t i = 0; i < vch2.size(); ++i) {
+        //     printf("vch2[%zu]: 0x%02x ", i, vch2[i]);
+        // }
+        // printf("\n");
+
         if (env.opcode == OP_AND) {
             for (size_t i = 0; i < vch1.size(); ++i) vch1[i] &= vch2[i];
+            size_t all_zero = 1;
+            size_t is_single = 1;
+            for (size_t i = 0; i < vch1.size(); ++i) {
+                if (vch1[i] != 0) all_zero = 0;
+                if (i >= 1 && vch1[i] != 0) {
+                    is_single = 0;
+                }
+            }
+            if (all_zero) {
+                vch1 = vchFalse;
+            }
+            else {
+                if (is_single && vch1[0] <= 0x7f) {
+                    while(vch1.size() != 1) {
+                        vch1.pop_back();
+                    }
+                }
+            }
         } else if (env.opcode == OP_OR) {
             for (size_t i = 0; i < vch1.size(); ++i) vch1[i] |= vch2[i];
         }
+        else if (env.opcode == OP_XOR) {
+            for (size_t i = 0; i < vch1.size(); ++i) vch1[i] ^= vch2[i];
+            size_t is_single = 1;
+            for (size_t i = 1; i < vch1.size(); ++i) if (vch1[i] != 0) is_single = 1;
+            if (is_single) {
+                if (vch1[0] <= 0x7f) {
+                    while(vch1.size() != 1) {
+                        vch1.pop_back();
+                    }
+                }
+            }
+        }
+
+        // printf("After Operation:\n");
+        // printf("vch1 size: %zu\n", vch1.size());
+        // for (size_t i = 0; i < vch1.size(); ++i) {
+        //     printf("vch1[%zu]: 0x%02x ", i, vch1[i]);
+        // }
+        // printf("\n");
+
         popstack(stack);
         popstack(stack);
         pushstack(stack, vch1);

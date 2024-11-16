@@ -22,6 +22,21 @@ int fn_step(const char* arg) {
     return 0;
 }
 
+int fn_run(const char* arg) {
+    while (!env->done) {
+        if (!instance.step()) {
+            fail("error: %s\n", instance.error_string().c_str());
+            return 0;
+        }
+        print_dualstack();
+        if (env->curr_op_seq < count) {
+            printf("%s\n", script_lines[env->curr_op_seq]);
+        }
+    }
+    printf("Reached the end of the script\n");
+    return 0;
+}
+
 int fn_rewind(const char* arg) {
     if (instance.at_start()) fail("error: no history to rewind\n");
     if (!instance.rewind()) fail("error: failed to rewind; this is a bug\n");
@@ -161,30 +176,71 @@ void print_dualstack() {
     printf("-+-");
     for (int i = 0; i < rcap; i++) printf("-");
     printf("\n");
+
+    // int li = 0, ri = 0;
+    // while (li < l.size() || ri < r.size()) {
+    //     if (li < l.size()) {
+    //         auto s = l[li++];
+    //         if (s.length() > lcap) s = s.substr(0, lcap-3) + "...";
+    //         printf(lfmt, s.c_str());
+    //     } else {
+    //         printf(lfmt, "");
+    //     }
+    //     printf("| ");
+    //     if (ri < r.size()) {
+    //         auto s = r[ri++];
+    //         // if (ms_start > ri) {
+    //             // printing stack items; right-align, no ansi
+    //             if (s.length() > rcap) s = s.substr(0, rcap-3) + "...";
+    //             printf(rfmt, s.c_str());
+    //         // } else {
+    //         //     // printing miniscript tree; left-align, ansi enabled
+    //         //     if (ansi::length(s) > rcap) s = ansi::substring(s, 0, rcap-3) + "...";
+    //         //     printf("%s", s.c_str());
+    //         // }
+    //     }
+    //     printf("\n");
+    // }
+
     int li = 0, ri = 0;
-    while (li < l.size() || ri < r.size()) {
+    int max_opcodes = 20; // Set the maximum number of opcodes to display
+    bool truncated = false; // Flag to indicate if we've truncated the output
+
+    while ((li < l.size() || ri < r.size()) && !truncated) {
         if (li < l.size()) {
-            auto s = l[li++];
-            if (s.length() > lcap) s = s.substr(0, lcap-3) + "...";
-            printf(lfmt, s.c_str());
+            if (li == max_opcodes) {
+                // We've reached the maximum number of opcodes to display
+                printf(lfmt, "...");
+                truncated = true; // Set the flag to true
+            } else {
+                auto s = l[li++];
+                if (s.length() > lcap) s = s.substr(0, lcap - 3) + "...";
+                printf(lfmt, s.c_str());
+            }
         } else {
             printf(lfmt, "");
         }
         printf("| ");
         if (ri < r.size()) {
             auto s = r[ri++];
-            // if (ms_start > ri) {
-                // printing stack items; right-align, no ansi
-                if (s.length() > rcap) s = s.substr(0, rcap-3) + "...";
-                printf(rfmt, s.c_str());
-            // } else {
-            //     // printing miniscript tree; left-align, ansi enabled
-            //     if (ansi::length(s) > rcap) s = ansi::substring(s, 0, rcap-3) + "...";
-            //     printf("%s", s.c_str());
-            // }
+            if (s.length() > rcap) s = s.substr(0, rcap - 3) + "...";
+            printf(rfmt, s.c_str());
+        } else {
+            printf(rfmt, "");
         }
         printf("\n");
     }
+
+    // If there are remaining stack items, continue printing them
+    while (ri < r.size()) {
+        printf(lfmt, ""); // No script line
+        printf("| ");
+        auto s = r[ri++];
+        if (s.length() > rcap) s = s.substr(0, rcap - 3) + "...";
+        printf(rfmt, s.c_str());
+        printf("\n");
+    }
+
 }
 
 int print_stack(std::vector<valtype>& stack, bool raw) {
@@ -415,4 +471,8 @@ int fn_exec(const char* arg) {
 int fn_print(const char*) {
     for (int i = 0; i < count; i++) printf("%s%s\n", i == env->curr_op_seq ? " -> " : "    ", script_lines[i]);
     return 0;
+}
+
+int fn_exit(const char*) {
+    exit(0);
 }
