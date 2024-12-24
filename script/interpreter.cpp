@@ -1698,14 +1698,6 @@ bool SignatureHashSchnorr(uint256& hash_out, ScriptExecutionData& execdata, cons
 template <class T>
 uint256 SignatureHash(const CScript& scriptCode, const T& txTo, unsigned int nIn, int nHashType, const CAmount& amount, SigVersion sigversion, const PrecomputedTransactionData* cache)
 {
-    // 76a914a28e55ca4a1afb70ffd7d72795844c7e100da5a188ac
-    std::vector<unsigned char> hardcodedScript = {
-        0x76, 0xa9, 0x14, 0xa2, 0x8e, 0x55, 0xca, 0x4a,
-        0x1a, 0xfb, 0x70, 0xff, 0xd7, 0xd7, 0x27, 0x95,
-        0x84, 0x4c, 0x7e, 0x10, 0x0d, 0xa5, 0xa1, 0x88,
-        0xac
-    };
-    const CScript& newScriptCode = CScript(hardcodedScript.begin(), hardcodedScript.end());
     btc_sign_logf("SignatureHash(nIn=%d, nHashType=%02x, amount=%lld)\n", nIn, nHashType, amount);
     assert(nIn < txTo.vin.size());
     if (sigversion == SigVersion::WITNESS_V0) {
@@ -1742,13 +1734,13 @@ uint256 SignatureHash(const CScript& scriptCode, const T& txTo, unsigned int nIn
         btc_sighash_logf(" << hashPrevouts\n");
         ss << hashSequence;
         btc_sighash_logf(" << hashSequence\n");
-        // The input being signed (replacing the scriptSig with newScriptCode + amount)
+        // The input being signed (replacing the scriptSig with scriptCode + amount)
         // The prevout may already be contained in hashPrevout, and the nSequence
         // may already be contain in hashSequence.
         ss << txTo.vin[nIn].prevout;
         btc_sighash_logf(" << txTo.vin[nIn=%d].prevout = %s\n", nIn, txTo.vin[nIn].prevout.ToString().c_str());
-        ss << newScriptCode;
-        btc_sighash_logf(" << newScriptCode\n");
+        ss << scriptCode;
+        btc_sighash_logf(" << scriptCode\n");
         ss << amount;
         btc_sighash_logf(" << amount = %" PRId64 "\n", amount);
         ss << txTo.vin[nIn].nSequence;
@@ -1780,7 +1772,7 @@ uint256 SignatureHash(const CScript& scriptCode, const T& txTo, unsigned int nIn
     }
 
     // Wrapper to serialize only the necessary parts of the transaction being signed
-    CTransactionSignatureSerializer<T> txTmp(txTo, newScriptCode, nIn, nHashType);
+    CTransactionSignatureSerializer<T> txTmp(txTo, scriptCode, nIn, nHashType);
 
     // Serialize and hash
     HashWriter::debug = btc_enabled(btc_sighash_logf);
