@@ -377,19 +377,6 @@ bool StepExtended(ScriptExecutionEnvironment& env, CScript::const_iterator& pc, 
             }
         }
 
-        // printf("After padding:\n");
-        // printf("vch1 size: %zu\n", vch1.size());
-        // for (size_t i = 0; i < vch1.size(); ++i) {
-        //     printf("vch1[%zu]: 0x%02x ", i, vch1[i]);
-        // }
-        // printf("\n");
-
-        // printf("vch2 size: %zu\n", vch2.size());
-        // for (size_t i = 0; i < vch2.size(); ++i) {
-        //     printf("vch2[%zu]: 0x%02x ", i, vch2[i]);
-        // }
-        // printf("\n");
-
         if (env.opcode == OP_AND) {
             for (size_t i = 0; i < vch1.size(); ++i) vch1[i] &= vch2[i];
             size_t all_zero = 1;
@@ -410,33 +397,46 @@ bool StepExtended(ScriptExecutionEnvironment& env, CScript::const_iterator& pc, 
                     }
                 }
             }
+
+            popstack(stack);
+            popstack(stack);
+            pushstack(stack, vch1);
+            return true;
         } else if (env.opcode == OP_OR) {
             for (size_t i = 0; i < vch1.size(); ++i) vch1[i] |= vch2[i];
         }
         else if (env.opcode == OP_XOR) {
-            for (size_t i = 0; i < vch1.size(); ++i) vch1[i] ^= vch2[i];
-            size_t is_single = 1;
-            for (size_t i = 1; i < vch1.size(); ++i) if (vch1[i] != 0) is_single = 1;
-            if (is_single) {
-                if (vch1[0] <= 0x7f) {
-                    while(vch1.size() != 1) {
-                        vch1.pop_back();
+            size_t is_zero = 1;
+            for (size_t i = 0; i < vch1.size(); ++i) {
+                vch1[i] ^= vch2[i];
+                if (vch1[i] != 0) is_zero = 0;
+            }
+            if (is_zero) {
+                CScriptNum bn(0);
+
+                popstack(stack);
+                popstack(stack);
+                pushstack(stack, bn.getvch());
+
+                return true;
+            }
+            else {
+                size_t is_single = 0;
+                for (size_t i = 1; i < vch1.size(); ++i) if (vch1[i] != 0) is_single = 1;
+                if (is_single) {
+                    if (vch1[0] <= 0x7f) {
+                        while(vch1.size() != 1) {
+                            vch1.pop_back();
+                        }
                     }
                 }
+
+                popstack(stack);
+                popstack(stack);
+                pushstack(stack, vch1);
+                return true;
             }
         }
-
-        // printf("After Operation:\n");
-        // printf("vch1 size: %zu\n", vch1.size());
-        // for (size_t i = 0; i < vch1.size(); ++i) {
-        //     printf("vch1[%zu]: 0x%02x ", i, vch1[i]);
-        // }
-        // printf("\n");
-
-        popstack(stack);
-        popstack(stack);
-        pushstack(stack, vch1);
-        return true;
 
     case OP_2MUL:
         // (in -- out)
